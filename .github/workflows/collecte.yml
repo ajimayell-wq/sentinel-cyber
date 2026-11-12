@@ -1,0 +1,65 @@
+name: Collecte
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+concurrency:
+  group: collecte
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  collecte:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: sentinel
+          POSTGRES_DB: sentinel
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:sentinel@localhost:5432/sentinel
+      PGPASSWORD: sentinel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package.json
+      - name: Restaurer l'historique
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .dbcache
+          key: db-${{ github.run_id }}
+          restore-keys: db-
+      - name: Charger la base
+        run: |
+          if [ -f .dbcache/dump.sql.gz ]; then gunzip -c .dbcache/dump.sql.gz | psql -h localhost -U postgres -d sentinel -q -v ON_ERROR_STOP=0 >/dev/null; fi
+      - name: Installer
+        run: cd server && npm install --no-audit --no-fund
+      - name: Collecter et exporter
+        run: cd server && node src/cli.js all ../public
+      - name: Sauvegarder la base
+        run: |
+          mkdir -p .dbcache
+          pg_dump -h localhost -U postgres -d sentinel --clean --if-exists | gzip > .dbcache/dump.sql.gz
+      - name: Enregistrer l'historique
+        uses: actions/cache/save@v4
+        with:
+          path: .dbcache
+          key: db-${{ github.run_id }}
+      - name: Publier les données
+        run: |
+          cd public
+          git init -q -b data
+          git config user.name "sentinel-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Données $(date -u +%FT%TZ)"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" data
