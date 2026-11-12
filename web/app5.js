@@ -87,6 +87,7 @@ function render(keep) {
   const a = document.activeElement, focus = a && a.id && ['INPUT', 'TEXTAREA'].includes(a.tagName) ? { id: a.id, s: a.selectionStart, e: a.selectionEnd } : null;
   let html, tab = S.tab;
   if (r[0] === 'fiche') html = detailView(r[1]);
+  else if (r[0] === 'briefing') html = briefingView();
   else if (r[0] === 'comparer') html = compareView(r[1], +r[2], +r[3]);
   else { tab = TABS.some(t => t[0] === r[0]) ? r[0] : 'accueil'; S.tab = tab; html = { accueil: homeView, incidents: incidentsView, vulns: vulnsView, recherche: searchView, veille: veilleView }[tab](); }
   main.innerHTML = html;
@@ -98,7 +99,7 @@ function render(keep) {
   const mp = $('#map-main'); if (mp) drawMap(mp, markersOf(S.snap.events), S.mapSel, c => { S.mapSel = c; render(true); });
   if (!home && !mp) cancelAnimationFrame(mapRaf);
   if (focus) { const el = document.getElementById(focus.id); if (el) { el.focus(); try { el.setSelectionRange(focus.s, focus.e); } catch { /* type sans sélection */ } } }
-  document.title = (r[0] === 'fiche' && S.snap?.byId.get(r[1]) ? clean(S.snap.byId.get(r[1]).title) + ' — ' : '') + 'SENTINEL CYBER';
+  document.title = (r[0] === 'briefing' ? 'Briefing — ' : '') + (r[0] === 'fiche' && S.snap?.byId.get(r[1]) ? clean(S.snap.byId.get(r[1]).title) + ' — ' : '') + 'SENTINEL CYBER';
 }
 const softRender = () => render(true);
 function go(h) { if (location.hash === h) render(true); else location.hash = h; }
@@ -130,6 +131,9 @@ document.addEventListener('click', async ev => {
       else if (v === 'map') { S.incView = 2; go('#/incidents'); }
       else go('#/veille');
       break;
+    case 'bperiod': S.briefH = BRIEF_P[+v][0]; render(true); break;
+    case 'bcopy': toast(await copyText(briefText(S.briefH ?? 24)) ? 'Briefing copié : collez-le dans un mail ou WhatsApp.' : 'Copie impossible sur ce navigateur.'); break;
+    case 'bshare': try { await navigator.share({ title: 'Briefing SENTINEL CYBER', text: briefText(S.briefH ?? 24) }); } catch { /* annulé */ } break;
     case 'ask': ask(S.q); break;
     case 'askEx': { const q = EXAMPLES[+v]; S.q = q; ask(q); break; }
     case 'addWatch': { const el = $('#wq'), w = el.value.trim(); if (w && !S.watch.some(x => lower(x) === lower(w))) { S.watch.push(w); saveWatch(); } render(true); break; }

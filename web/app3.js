@@ -63,6 +63,7 @@ function homeView() {
       <button class="panel" data-act="goStat" data-v="kev"><div class="v" style="color:var(--orange)">${kev}</div><div class="l">Inscriptions KEV</div><div class="s">7 jours</div></button>
       <button class="panel" data-act="goStat" data-v="src"><div class="v" style="color:${okSrc === s.sources.length ? 'var(--blue)' : 'var(--yellow)'}">${okSrc}/${s.sources.length}</div><div class="l">Sources</div><div class="s">joignables</div></button>
     </div>
+    <a class="btn primary block" style="margin:12px 0 2px" href="#/briefing">${IC.doc}Briefing des dernières 24 h</a>
     <button class="panel" data-act="goStat" data-v="map"><div class="between">${eyebrow('Localisations documentées')}<span class="small mono">${marks.length} pays ›</span></div><canvas class="map" id="map-home" role="img" aria-label="Carte des pays mentionnés dans les incidents"></canvas></button>
     ${sec('Maroc', maroc.length, 'Incidents', 'goStat" data-v="ma')}
     ${maroc.length ? maroc.slice(0, 6).map(card).join('') : note('Aucune fiche ne mentionne le Maroc dans les publications collectées (DGSSI, presse marocaine, revendications de rançongiciels).')}

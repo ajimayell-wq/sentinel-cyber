@@ -1,5 +1,5 @@
 // Coque de l'application en cache pour un affichage hors connexion. Les données passent toujours par le réseau d'abord.
-const V = 'sentinel-web-v2';
+const V = 'sentinel-v1794523769';
 const SHELL = ['./', 'index.html', 'style.css', 'app1.js', 'app2.js', 'app3.js', 'app4.js', 'app5.js', 'icon.svg', 'manifest.webmanifest'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

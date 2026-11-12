@@ -16,7 +16,7 @@ function detailView(id) {
   const header = `${fic ? `<div>${pill('FICTIF', 'var(--violet)', 1)}<p class="small" style="color:var(--violet);margin:6px 0 10px">Organisations, groupe, chiffres et liens de cette fiche sont inventés.</p></div>` : ''}
     <h1 style="font-size:22px;line-height:1.3;margin:6px 0 12px;font-weight:600">${esc(clean(e.title))}</h1>
     <div class="wrapflex" style="align-items:center">${stChip(e.status, true)}${e.kind !== 'actu' ? `<span>${sevMeter(e.severity)}</span>` : ''}${watched ? pill('Ma veille', 'var(--blue)', 1) : ''}${followed ? pill('Suivi', 'var(--yellow)', 1) : ''}</div>
-    ${e.statusReason ? `<p class="note">${esc(e.statusReason)}</p>` : ''}${e.kind !== 'actu' && e.severityReason ? `<p class="note" style="margin-top:0">Gravité : ${esc(e.severityReason)}</p>` : ''}`;
+    ${e.statusReason ? `<p class="note">${esc(e.statusReason)}</p>` : ''}${e.kind !== 'actu' && e.severityReason ? `<p class="note" style="margin-top:0">Gravité : ${esc(e.severityReason)}</p>` : ''}${readBtn(e)}`;
 
   let newBody = '';
   if (showNew) {
@@ -100,3 +100,77 @@ function compareView(id, a0, b0) {
     ${e.fictif && ch.some(c => c.k === 'sauvegardes') && e.defense.length ? `${sec('Vérifications défensives associées')}<div class="panel">${e.defense.slice(0, 3).map(d => `<p style="margin:4px 0">• ${esc(d)}</p>`).join('')}</div>` : ''}</div>`;
 }
 
+
+// ───────────── Lire l'article ─────────────
+const PUB_RANK = { officiel: 4, editeur: 3, recherche: 2, donnees: 1 };
+function mainPub(e) {
+  const ok = e.pubs.filter(p => safeUrl(p.url));
+  const orig = ok.filter(p => p.derivedFrom == null);
+  return (orig.length ? orig : ok).sort((a, b) => (PUB_RANK[b.kind] ?? 0) - (PUB_RANK[a.kind] ?? 0) || (a.publishedAt ?? a.collectedAt) - (b.publishedAt ?? b.collectedAt))[0] ?? null;
+}
+function mainUrl(e) {
+  if (e.fictif) return null;
+  const p = mainPub(e);
+  return p ? safeUrl(p.url) : e.kind === 'vuln' ? `https://nvd.nist.gov/vuln/detail/${encodeURIComponent(e.id)}` : null;
+}
+function readBtn(e) {
+  const url = mainUrl(e); if (!url) return '';
+  const p = mainPub(e), others = e.pubs.length - (p ? 1 : 0);
+  return `<a class="btn primary block" style="margin:4px 0 6px" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${IC.doc}${esc(p ? `Lire l’article · ${p.src}` : 'Lire la fiche NVD')} ↗</a>${others > 0 ? `<button class="small lnk" data-act="mode" data-v="1" style="background:none;border:0;color:var(--blue);padding:2px 0 10px">${others} autre${others > 1 ? 's' : ''} source${others > 1 ? 's' : ''} dans l’analyse technique ›</button>` : ''}`;
+}
+
+// ───────────── Briefing ─────────────
+const BRIEF_P = [[24, '24 h'], [72, '72 h'], [168, '7 jours']];
+function briefData(hours) {
+  const s = S.snap, since = Date.now() - hours * 3600e3, sinceDay = new Date(since).toISOString().slice(0, 10);
+  const real = s.events.filter(e => !e.fictif), rec = (a, b) => b.recency - a.recency;
+  const out = [
+    ['Failles activement exploitées (ajouts KEV)', real.filter(e => (e.vuln?.kev?.added ?? '') >= sinceDay).sort((a, b) => (b.vuln.cvss ?? 0) - (a.vuln.cvss ?? 0))],
+    ['Incidents confirmés', real.filter(e => e.kind === 'incident' && e.status === 'confirme' && e.recency >= since).sort(rec)],
+    ['Revendications (non vérifiées)', real.filter(e => e.kind === 'incident' && e.status === 'revendique' && e.recency >= since).sort(rec)],
+    ['Maroc', real.filter(e => e.countries.some(c => c.code === 'MA') && e.recency >= since).sort(rec)],
+  ];
+  if (S.watch.length) out.push(['Ma veille', real.filter(e => watchMatch(e, S.watch) && e.recency >= since).sort(rec)]);
+  out.push(['Fiches qui ont évolué', real.filter(e => e.versions.length > 1 && e.updatedAt >= since).sort((a, b) => b.updatedAt - a.updatedAt)]);
+  return out;
+}
+const briefLine = e => {
+  const v = e.vuln;
+  const extra = v ? [v.cvss != null ? `CVSS ${v.cvss}` : '', v.kev?.ransomware === 'Known' ? 'utilisée par des rançongiciels' : '', v.patch === 'oui' ? 'correctif disponible' : ''].filter(Boolean).join(' · ')
+    : [statusLabel(e.status), e.countries.map(c => c.name).slice(0, 3).join(', '), mainPub(e)?.src ?? ''].filter(Boolean).join(' · ');
+  return { title: v ? `${v.cve} — ${clean(e.title)}` : clean(e.title), extra };
+};
+function briefText(hours) {
+  const s = S.snap, label = BRIEF_P.find(p => p[0] === hours)[1];
+  const parts = [`SENTINEL CYBER — Briefing des dernières ${label}`, `Données collectées le ${dateTime(s.generatedAt)}`, ''];
+  for (const [t, list] of briefData(hours)) {
+    if (!list.length) continue;
+    parts.push(`■ ${t} (${list.length})`);
+    for (const e of list.slice(0, 10)) { const l = briefLine(e), u = mainUrl(e); parts.push(`• ${l.title}${l.extra ? ` (${l.extra})` : ''}`); if (u) parts.push(`  ${u}`); }
+    if (list.length > 10) parts.push(`  … et ${list.length - 10} autre(s)`);
+    parts.push('');
+  }
+  parts.push('Statuts établis à partir des sources publiques : à vérifier dans les publications d’origine.');
+  return parts.join('\n');
+}
+function briefingView() {
+  const s = S.snap;
+  if (!s) return `<div class="wrap">${topbar('Briefing')}${noSnap()}</div>`;
+  const h = S.briefH ?? 24, data = briefData(h), label = BRIEF_P.find(p => p[0] === h)[1];
+  const n = t => data.find(d => d[0].startsWith(t))?.[1].length ?? 0;
+  const total = data.reduce((a, d) => a + d[1].length, 0);
+  const summary = `${n('Failles')} faille(s) exploitée(s) ajoutée(s) au catalogue KEV, ${n('Incidents')} incident(s) confirmé(s), ${n('Revendications')} revendication(s) et ${n('Maroc')} fiche(s) sur le Maroc ces dernières ${label}.`;
+  return `<div class="wrap">${topbar('Briefing')}
+    <p class="small" style="margin:2px 0 10px">Données collectées le ${esc(dateTime(s.generatedAt))}</p>
+    ${seg(BRIEF_P.map(p => p[1]), BRIEF_P.findIndex(p => p[0] === h), 'bperiod')}
+    <div class="panel acc" style="--acc:var(--blue)">${eyebrow('En bref', 'var(--blue)')}<p style="margin:6px 0 12px">${esc(summary)}</p>
+      <div class="wrapflex">${btn('Copier le briefing', 'doc', 'bcopy', { primary: 1 })}${navigator.share ? btn('Partager', 'link', 'bshare') : ''}</div></div>
+    ${total ? data.map(([t, list]) => list.length ? `${sec(t, list.length)}${list.slice(0, 8).map(card).join('')}${list.length > 8 ? note(`… et ${list.length - 8} autre(s), incluses dans le texte copié.`) : ''}` : '').join('') : note(`Rien de nouveau dans les publications collectées ces dernières ${label}.`)}
+  </div>`;
+}
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); return true; } catch {
+    const a = document.createElement('textarea'); a.value = t; a.style.position = 'fixed'; a.style.opacity = '0'; document.body.appendChild(a); a.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch { /* ignoré */ } a.remove(); return ok;
+  }
+}
