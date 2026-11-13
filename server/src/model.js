@@ -49,6 +49,8 @@ const EVENT = /\b(breach(ed|es)?|hacked|compromised?|confirms?|stolen|stole|stea
 // n'en crée une que si son titre décrit un événement (compromission, fuite, arrêt de service…).
 export function nature(p, src = {}) {
   if (src.role === 'avis') return { kind: 'actu', type: 'maj' };
+  // page d'état d'un éditeur : chaque incident annoncé est une panne de service confirmée par l'éditeur lui-même
+  if (src.role === 'statut') return pickType(`${p.title}. ${p.summary ?? ''}`) === 'panne' || /\b(incident|outage|issue|degrad|unable|impact)/i.test(p.title) ? { kind: 'incident', type: 'panne' } : { kind: 'actu', type: 'maj' };
   const find = pickType;
   const expert = src.kind === 'recherche' || src.kind === 'editeur' || src.kind === 'officiel';
   const type = find(p.title) ?? (expert ? 'recherche' : find(`${p.title}. ${p.summary ?? ''}`) ?? 'autre');

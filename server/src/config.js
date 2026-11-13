@@ -44,6 +44,11 @@ export const SOURCES = [
   { id: 'p0', name: 'Google Project Zero', org: 'Google', kind: 'recherche', lang: 'en', site: 'https://googleprojectzero.blogspot.com', urls: ['https://googleprojectzero.blogspot.com/feeds/posts/default'] },
   { id: 'sekoia', name: 'Sekoia.io — Blog', org: 'Sekoia.io', kind: 'recherche', lang: 'en', site: 'https://blog.sekoia.io', urls: ['https://blog.sekoia.io/feed/'] },
 
+  // pages d'état officielles des grands services : la mise à jour vient directement de l'éditeur (ce qu'il publie aussi sur X)
+  { id: 'ms365-status', name: 'Microsoft 365 — État des services', org: 'Microsoft', kind: 'editeur', role: 'statut', lang: 'en', site: 'https://status.cloud.microsoft', max: 15, urls: ['https://status.cloud.microsoft/api/feed/mac'] },
+  { id: 'azure-status', name: 'Azure — État des services', org: 'Microsoft', kind: 'editeur', role: 'statut', lang: 'en', site: 'https://azure.status.microsoft', max: 15, urls: ['https://rssfeed.azure.status.microsoft/en-us/status/feed/'] },
+
+  { id: 'csn', name: 'Cyber Security News', org: 'Cyber Security News', kind: 'presse', lang: 'en', site: 'https://cybersecuritynews.com', urls: ['https://cybersecuritynews.com/feed/'] },
   { id: 'bleeping', name: 'BleepingComputer', org: 'BleepingComputer', kind: 'presse', lang: 'en', site: 'https://www.bleepingcomputer.com', urls: ['https://www.bleepingcomputer.com/feed/'] },
   { id: 'therecord', name: 'The Record', org: 'Recorded Future News', kind: 'presse', lang: 'en', site: 'https://therecord.media', urls: ['https://therecord.media/feed'] },
   { id: 'securityweek', name: 'SecurityWeek', org: 'SecurityWeek', kind: 'presse', lang: 'en', site: 'https://www.securityweek.com', urls: ['https://www.securityweek.com/feed/'] },
@@ -62,7 +67,7 @@ export const TYPES = [
   ['rancongiciel', /\b(ransomware|rançongiciel|rancongiciel|ransom gang|extortion|double[- ]extorsion|lockbit|akira|qilin|ransomhub)\b/i],
   ['fuite', /\b(data breach|data leak|breach(es|ed)?|leak(s|ed)?|fuite de données|fuites? d[’']informations|données personnelles|exposed (data|records)|stolen data|vol de données|exfiltrat)/i],
   ['phishing', /\b(phishing|hameçonnage|hameconnage|smishing|vishing|spear[- ]phishing|quishing|business email compromise|BEC)\b/i],
-  ['panne', /\b(outages?|pannes?|hors service|service disruptions?|disrupts? (services?|access|operations|email)|perturbations?|interruption de service|went down|is down|down for (users|millions|hours)|inaccessible|indisponible)\b/i],
+  ['panne', /\b(outages?|pannes?|hors service|service disruptions?|disrupts? (services?|access|operations|email)|perturbations?|interruption de service|went down|is down|down for (users|millions|hours)|inaccessible|indisponible|unable to (access|use|connect|send|receive|sign in)|issues? (accessing|connecting|with)|degraded|service incident)\b/i],
   ['infra', /\b(critical infrastructure|infrastructures? critiques?|ICS|SCADA|OT network|industrial control|power grid|water (utility|treatment|system)|pipeline|opérateurs? d[’']importance vitale|OIV)\b/i],
   ['cloud', /\b(cloud|AWS|Azure|GCP|Google Cloud|S3 bucket|Kubernetes|SaaS|Snowflake|Okta|tenant|Entra ID|Microsoft 365)\b/i],
   ['incident', /\b(cyber ?attack|cyberattaque|cyber-attaque|hack(ed|ers?)?|intrusion|compromis(e|ed)?|compromission|outage after|DDoS|déni de service|malware campaign|espionage|espionnage|supply[- ]chain attack|zero-day attacks?|exploited in (the wild|attacks))\b/i],
