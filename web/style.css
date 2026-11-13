@@ -117,3 +117,62 @@ canvas.map{width:100%;aspect-ratio:90/34;display:block;cursor:pointer}
 @media(max-width:420px){.wm{font-size:15px;letter-spacing:.14em}.syncpill{font-size:11px;padding:8px 4px}}
 
 .panel canvas.map{max-width:720px;margin:0 auto}
+
+/* ───────── Thème « graphite & violet » : dégradés sombres, cartes souples ───────── */
+:root{
+  --bg:#0B0A10;--surface:#15141C;--raised:#1E1C28;--line:#2A2735;--text:#EEECF5;--dim:#A7A3B8;--faint:#6F6B82;
+  --blue:#A78BFA;--blueDeep:#2A2346;--violet:#D9A2FF;
+  --grad:linear-gradient(135deg,#6D4DFF 0%,#9B6BFF 48%,#D58BFF 100%);
+  --sheen:linear-gradient(165deg,rgba(255,255,255,.055) 0%,rgba(255,255,255,.015) 38%,rgba(255,255,255,0) 70%);
+  --sans:'Manrope',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --ease:cubic-bezier(.22,.8,.24,1);
+}
+body{background:
+  radial-gradient(900px 520px at 92% -8%,rgba(122,88,255,.20),transparent 62%),
+  radial-gradient(700px 480px at -12% 38%,rgba(186,120,255,.09),transparent 64%),
+  linear-gradient(180deg,#13111B 0%,#0B0A10 46%,#0A090E 100%) fixed;letter-spacing:.005em}
+::selection{background:rgba(167,139,250,.35)}
+a{color:#C4B2FF}
+
+/* cartes : chaque fiche, chaque bloc est une carte */
+.panel,.card{background:var(--sheen),linear-gradient(180deg,#17151F,#13121A);border:1px solid rgba(255,255,255,.06);border-radius:20px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 14px 34px -22px rgba(0,0,0,.9);transition:transform .35s var(--ease),border-color .35s var(--ease),box-shadow .35s var(--ease)}
+.card{padding:16px 16px 14px;margin:12px 0}
+a.card:hover,button.panel:hover,a.panel:hover{transform:translateY(-2px);border-color:rgba(167,139,250,.32);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 22px 40px -24px rgba(109,77,255,.55);text-decoration:none;background:var(--sheen),linear-gradient(180deg,#1A1823,#14131B)}
+a.card:active,button.panel:active{transform:translateY(0) scale(.995)}
+.panel.acc{border-left:1px solid rgba(255,255,255,.06);padding-left:18px}
+.panel.acc::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:var(--acc,var(--grad))}
+.card .title{font-weight:600;letter-spacing:-.01em}
+.stats .panel{border-radius:18px}
+.stats .v{font-family:var(--sans);font-weight:700;letter-spacing:-.02em}
+
+/* boutons, segments, puces */
+.btn{border-radius:14px;border-color:rgba(255,255,255,.07);background:linear-gradient(180deg,#221F2D,#1B1925);transition:transform .25s var(--ease),filter .25s}
+.btn:hover{background:linear-gradient(180deg,#282535,#1F1C2A)}
+.btn.primary{background:var(--grad);border:0;color:#fff;box-shadow:0 10px 26px -12px rgba(124,88,255,.85)}
+.btn.primary:hover{filter:brightness(1.07);transform:translateY(-1px)}
+.seg{border-radius:16px;background:#14131B;border-color:rgba(255,255,255,.06)}
+.seg button{border-radius:12px;transition:background .3s var(--ease),color .3s}
+.seg button[aria-pressed=true],.chip[aria-pressed=true]{background:linear-gradient(135deg,rgba(109,77,255,.42),rgba(213,139,255,.26));border-color:rgba(190,160,255,.45);color:#fff}
+.chip{background:#16151D;border-color:rgba(255,255,255,.07)}
+input[type=text],input[type=search],input[type=url]{border-radius:14px;background:#14131B;border-color:rgba(255,255,255,.07)}
+input:focus{border-color:rgba(167,139,250,.55);outline:none;box-shadow:0 0 0 3px rgba(167,139,250,.15)}
+.switch:checked{background:var(--grad)}.switch:checked::after{background:#fff}
+
+/* navigation et barres translucides */
+#nav{background:rgba(17,16,23,.78);-webkit-backdrop-filter:blur(16px) saturate(1.2);backdrop-filter:blur(16px) saturate(1.2);border-color:rgba(255,255,255,.06)}
+#nav button[aria-current=page] svg{color:#C4B2FF}
+#nav button[aria-current=page]::before{background:var(--grad);width:30px;height:3px;border-radius:2px}
+@media(min-width:900px){#nav button[aria-current=page]{background:linear-gradient(135deg,rgba(109,77,255,.30),rgba(213,139,255,.14))}#nav button:hover{background:rgba(255,255,255,.04)}}
+.top{background:rgba(11,10,16,.72);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.wm i,#nav .brand i{background:var(--grad);border-radius:3px}.wm b,#nav .brand b{color:#C4B2FF}
+.head h1{font-weight:700;letter-spacing:-.02em}
+.sec h3{color:var(--dim);letter-spacing:.11em}
+
+/* apparition douce des cartes */
+@media (prefers-reduced-motion:no-preference){
+  .card,.panel{animation:rise .5s var(--ease) both}
+  .card:nth-child(2){animation-delay:.03s}.card:nth-child(3){animation-delay:.06s}.card:nth-child(4){animation-delay:.09s}.card:nth-child(5){animation-delay:.12s}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+}
+.btn,.btn:hover{text-decoration:none}
