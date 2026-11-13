@@ -6,8 +6,15 @@ import { sha, excerpt } from './parse.js';
 const uniq = a => [...new Set(a)];
 const techRx = TECHS.map(t => [t, new RegExp(`(^|[^\\p{L}\\p{N}])${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^\\p{L}\\p{N}])`, 'u')]);
 
+// Type d'après le texte. Une panne liée à une attaque reste une cyberattaque ; une panne « sans cyberattaque » reste une panne.
+export function pickType(text) {
+  const t = TYPES.find(([, rx]) => rx.test(text))?.[0];
+  if (t === 'panne' && RX.attackword.test(text) && !RX.noattack.test(text)) return 'incident';
+  return t;
+}
+
 export function classify(text) {
-  const type = (TYPES.find(([, rx]) => rx.test(text)) ?? ['autre'])[0];
+  const type = pickType(text) ?? 'autre';
   return {
     type,
     kind: INCIDENT_TYPES.has(type) ? 'incident' : 'actu',
@@ -21,10 +28,11 @@ export function classify(text) {
 }
 
 // Statut porté par UNE publication : ce que la source permet d'affirmer, pas davantage.
-function pubStatus(p, incident) {
+function pubStatus(p, incident, type) {
   const text = `${p.title} ${p.summary ?? ''}`;
   if (!incident) return p.kind === 'officiel' || p.kind === 'editeur' ? 'confirme' : 'signale';
-  if (RX.deny.test(text)) return 'conteste';
+  if (RX.deny.test(text) && !RX.noattack.test(text)) return 'conteste';
+  if (type === 'panne' && (p.kind === 'editeur' || RX.panneack.test(text) || RX.noattack.test(text))) return 'confirme';
   if (p.kind === 'officiel') return 'confirme';
   if (RX.confirm.test(text)) return 'confirme';
   if (RX.claim.test(text)) return 'revendique';
@@ -41,7 +49,7 @@ const EVENT = /\b(breach(ed|es)?|hacked|compromised?|confirms?|stolen|stole|stea
 // n'en crée une que si son titre décrit un événement (compromission, fuite, arrêt de service…).
 export function nature(p, src = {}) {
   if (src.role === 'avis') return { kind: 'actu', type: 'maj' };
-  const find = t => TYPES.find(([, rx]) => rx.test(t))?.[0];
+  const find = pickType;
   const expert = src.kind === 'recherche' || src.kind === 'editeur' || src.kind === 'officiel';
   const type = find(p.title) ?? (expert ? 'recherche' : find(`${p.title}. ${p.summary ?? ''}`) ?? 'autre');
   const incident = INCIDENT_TYPES.has(type) && !NOT_INCIDENT.test(p.title) && src.kind !== 'officiel' && (!expert || EVENT.test(p.title));
@@ -142,17 +150,27 @@ export async function rebuild(id, now = new Date()) {
   const incident = ev.kind === 'incident';
   // pays, secteurs et groupe : titres et résumés seulement ; identifiants CVE et ATT&CK : texte complet
   const full = classify(pubs.map(p => `${p.title}. ${p.summary ?? ''} ${p.body ?? ''}`).join(' '));
-  const c = { ...classify(pubs.map(p => `${p.title}. ${p.summary ?? ''}`).join(' ')), cves: full.cves, attack: full.attack, type: ev.type };
-  // une source nationale (DGSSI, presse marocaine…) rattache d'office ses publications à son pays
+  const heads = pubs.map(p => `${p.title}. ${p.summary ?? ''}`).join(' ');
+  const c = { ...classify(heads), cves: full.cves, attack: full.attack, type: ev.type };
+  // une panne de service (sans attaque) est classée comme telle, y compris pour les fiches déjà créées
+  if (incident && !['rancongiciel', 'fuite'].includes(c.type) && pubs.some(p => pickType(`${p.title}. ${p.summary ?? ''}`) === 'panne')) c.type = 'panne';
+  // une source nationale (DGSSI, presse marocaine…) rattache ses publications à son pays,
+  // sauf quand le sujet est mondial ou qu'un autre pays est explicitement nommé
   for (const code of new Set(pubs.map(p => SOURCES.find(s => s.id === p.source_id)?.country).filter(Boolean))) {
     const k = COUNTRIES.find(x => x[0] === code);
-    if (k && !c.countries.some(x => x.code === code)) c.countries = [...c.countries, { code, name: k[1], lat: k[2], lon: k[3] }];
+    const elsewhere = RX.global.test(heads) || (c.countries.length && !c.countries.some(x => x.code === code));
+    if (k && !elsewhere && !c.countries.some(x => x.code === code)) c.countries = [...c.countries, { code, name: k[1], lat: k[2], lon: k[3] }];
   }
   let out = { claims: [], data: {} };
   if (ev.kind === 'vuln') out = await buildVuln(ev, pubs);
 
-  for (const p of pubs) p.st = pubStatus(p, incident);
+  for (const p of pubs) p.st = pubStatus(p, incident, c.type);
   const claims = out.claims;
+  if (c.type === 'panne') {
+    const na = pubs.find(p => RX.noattack.test(`${p.title} ${p.summary ?? ''}`));
+    claims.push(na ? { k: 'cause', label: 'Cause', v: 'Pas de cyberattaque selon les déclarations rapportées', st: 'signale', src: na.src, url: na.url, pub: na.id }
+      : { k: 'cause', label: 'Cause', v: 'Non communiquée par les sources', st: 'signale', src: 'sources de la fiche' });
+  }
   if (c.countries.length) claims.push({ k: 'pays', label: 'Pays mentionnés', v: c.countries.map(x => x.name).join(', '), st: 'signale', src: 'sources de la fiche' });
   if (incident && c.sectors.length) claims.push({ k: 'secteur', label: 'Secteurs mentionnés', v: c.sectors.join(', '), st: 'signale', src: 'sources de la fiche' });
   let actor = null;

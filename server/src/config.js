@@ -62,6 +62,7 @@ export const TYPES = [
   ['rancongiciel', /\b(ransomware|rançongiciel|rancongiciel|ransom gang|extortion|double[- ]extorsion|lockbit|akira|qilin|ransomhub)\b/i],
   ['fuite', /\b(data breach|data leak|breach(es|ed)?|leak(s|ed)?|fuite de données|fuites? d[’']informations|données personnelles|exposed (data|records)|stolen data|vol de données|exfiltrat)/i],
   ['phishing', /\b(phishing|hameçonnage|hameconnage|smishing|vishing|spear[- ]phishing|quishing|business email compromise|BEC)\b/i],
+  ['panne', /\b(outages?|pannes?|hors service|service disruptions?|disrupts? (services?|access|operations|email)|perturbations?|interruption de service|went down|is down|down for (users|millions|hours)|inaccessible|indisponible)\b/i],
   ['infra', /\b(critical infrastructure|infrastructures? critiques?|ICS|SCADA|OT network|industrial control|power grid|water (utility|treatment|system)|pipeline|opérateurs? d[’']importance vitale|OIV)\b/i],
   ['cloud', /\b(cloud|AWS|Azure|GCP|Google Cloud|S3 bucket|Kubernetes|SaaS|Snowflake|Okta|tenant|Entra ID|Microsoft 365)\b/i],
   ['incident', /\b(cyber ?attack|cyberattaque|cyber-attaque|hack(ed|ers?)?|intrusion|compromis(e|ed)?|compromission|outage after|DDoS|déni de service|malware campaign|espionage|espionnage|supply[- ]chain attack|zero-day attacks?|exploited in (the wild|attacks))\b/i],
@@ -69,7 +70,7 @@ export const TYPES = [
   ['norme', /\b(NIS ?2|DORA|cyber resilience act|CRA|référentiel|guide|guidance|framework|standard|norme|ISO ?27001|recommandations?|best practices|bonnes pratiques|réglementation|regulation|directive|post-quantum|secure by design)\b/i],
   ['recherche', /\b(research|researchers?|analysis|analyse|rapport|report|threat (landscape|intelligence)|panorama|étude|deep dive|technical analysis|proof[- ]of[- ]concept)\b/i],
 ];
-export const INCIDENT_TYPES = new Set(['rancongiciel', 'fuite', 'phishing', 'infra', 'cloud', 'incident']);
+export const INCIDENT_TYPES = new Set(['rancongiciel', 'fuite', 'phishing', 'panne', 'infra', 'cloud', 'incident']);
 
 export const SECTORS = [
   ['Santé', /\b(hospital|hôpita(l|ux)|healthcare|health system|clinic|clinique|CHU|medical|NHS|patient|pharma|santé)\b/i],
@@ -126,6 +127,11 @@ export const RX = {
   attack: /\bT1\d{3}(?:\.\d{3})?\b/g,
   confirm: /\b(confirm(s|ed)?|confirme|a confirmé|acknowledg(es|ed)|disclos(es|ed)|notif(ies|ied|ying)|8-K|filing with|a reconnu|a annoncé avoir été victime|says it was (breached|hacked))\b/i,
   claim: /\b(claims?|claimed|revendiqu|takes credit|took credit|leak site|listed on|alleg(es|ed|edly)|prétend|affirme avoir)\b/i,
+  // une panne « sans cyberattaque » n'est pas un démenti de la panne
+  noattack: /(no (sign|evidence|indication)s? of (a |any )?(malicious|cyber ?attack|attack|hack)|not (the result of |caused by )?a cyber ?attack|pas de cyberattaque|aucun signe d[’']action malveillante|aucune cyberattaque|pas d[’']attaque|n[’']est pas une cyberattaque|non liée? à une cyberattaque|écart\w* la piste)/i,
+  attackword: /\b(cyber ?attacks?|cyberattaques?|hack(ed|ers?)|intrusion|DDoS|déni de service|malicious|malveillante?)\b/i,
+  panneack: /\b(says?|said|confirm\w*|acknowledg\w*|investigating|mitigat\w*|restor\w*|resolved|selon|assure|reconna[iî]t|a reconnu|rétabli\w*|enquête|status page)\b/i,
+  global: /\b(mondiale?s?|monde entier|worldwide|global(ly)?|international(e|es|ly)?|plusieurs pays|across the world)\b/i,
   deny: /\b(den(y|ies|ied)|dément|a démenti|disputes?|refutes?|no evidence of|conteste|réfute)\b/i,
 };
 

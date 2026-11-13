@@ -15,7 +15,7 @@ const lower = s => String(s ?? '').toLowerCase();
 const ms = v => { if (!v) return null; const t = Date.parse(v); return Number.isNaN(t) ? null : t; };
 
 // ───────────── Libellés ─────────────
-const TYPES = { rancongiciel: 'Rançongiciel', fuite: 'Fuite de données', phishing: 'Hameçonnage', infra: 'Infrastructure critique', cloud: 'Cloud', incident: 'Cyberattaque', vuln_exploitee: 'Vulnérabilité exploitée', vuln: 'Vulnérabilité', maj: 'Mise à jour de sécurité', norme: 'Normes et pratiques', recherche: 'Recherche' };
+const TYPES = { rancongiciel: 'Rançongiciel', fuite: 'Fuite de données', phishing: 'Hameçonnage', infra: 'Infrastructure critique', cloud: 'Cloud', panne: 'Panne de service', incident: 'Cyberattaque', vuln_exploitee: 'Vulnérabilité exploitée', vuln: 'Vulnérabilité', maj: 'Mise à jour de sécurité', norme: 'Normes et pratiques', recherche: 'Recherche' };
 const typeLabel = t => TYPES[t] ?? 'Actualité';
 const statusLabel = (s, long) => ({ confirme: 'Confirmé', revendique: 'Revendiqué', conteste: 'Contesté' }[s] ?? (long ? 'Signalé par une source' : 'Signalé'));
 const SEV = { critique: ['Critique', 4], elevee: ['Élevée', 3], moyenne: ['Moyenne', 2], faible: ['Faible', 1] };

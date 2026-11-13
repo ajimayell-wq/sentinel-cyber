@@ -42,6 +42,23 @@ const chip = (label, on, act, g, v) => `<button class="chip" aria-pressed="${on}
 const noSnap = () => S.loading ? empty('Chargement des fiches…', 'Récupération de l’instantané en cours.') : `<div class="empty"><h3>Aucune donnée disponible</h3><p>${esc(S.error ? `Le serveur est injoignable : ${S.error}.` : 'Aucun instantané n’a pu être chargé.')}</p><p>${btn('Réessayer', 'refresh', 'refresh', { primary: 1 })}</p></div>`;
 const syncPill = () => { const s = S.snap, c = S.syncing ? 'var(--blue)' : (S.error || S.fromCache) ? 'var(--orange)' : 'var(--green)'; return `<button class="syncpill" data-act="refresh" style="--c:${c}" aria-label="Synchroniser maintenant"><i></i>${S.syncing ? 'Synchronisation…' : s ? `Collecte ${esc(ago(s.generatedAt))}` : 'Synchroniser'} ${IC.refresh.replace('<svg', '<svg width="15" height="15"')}</button>`; };
 
+// ───────────── À la une ─────────────
+// Sujets des dernières 36 h dont tout le monde parle : nombre de sources, grand éditeur touché, panne mondiale, faille critique exploitée.
+// Le statut n'entre pas dans le tri : une panne « signalée » mais couverte partout reste à la une.
+const BIG = /\b(microsoft|outlook|teams|azure|windows|google|gmail|android|chrome|apple|icloud|iphone|amazon|aws|cloudflare|meta|facebook|instagram|whatsapp|crowdstrike|cisco|fortinet|palo alto|oracle|salesforce|openai|chatgpt|x\.com|twitter|starlink|visa|mastercard|swift)\b/i;
+function headlines(real, now = Date.now()) {
+  const since = now - 36 * 3600e3, sinceDay = new Date(since).toISOString().slice(0, 10), out = [], seen = new Set();
+  const scored = real.map(e => {
+    const v = e.vuln, big = (lower(e.title).match(BIG) ?? [])[0];
+    let score = 0;
+    if (e.kind === 'incident' && e.recency >= since) score = e.sourceCount * 2 + (big ? 3 : 0) + (e.type === 'panne' ? 2 : 0) + (e.status === 'confirme' ? 1 : 0) + (/mondial|worldwide|global/i.test(e.title) ? 2 : 0);
+    else if (v?.kev && (v.kev.added ?? '') >= sinceDay) score = 3 + ((v.cvss ?? 0) >= 9 ? 2 : 0) + (v.kev.ransomware === 'Known' ? 2 : 0) + (big ? 2 : 0);
+    return { e, score, key: e.type === 'panne' && big ? 'panne:' + big.replace(/outlook|teams|azure|windows/, 'microsoft') : e.id };
+  }).filter(x => x.score >= 5).sort((a, b) => b.score - a.score || b.e.recency - a.e.recency);
+  for (const x of scored) { if (seen.has(x.key)) continue; seen.add(x.key); out.push(x.e); if (out.length >= 5) break; }
+  return out;
+}
+
 // ───────────── Accueil ─────────────
 function homeView() {
   const s = S.snap;
@@ -54,7 +71,7 @@ function homeView() {
   const kev = real.filter(e => (e.vuln?.kev?.added ?? '') >= weekAgo).length;
   const marks = markersOf(real), okSrc = s.sources.filter(x => !x.lastError && x.lastSuccess).length;
   const maroc = real.filter(e => e.countries.some(c => c.code === 'MA')).sort((a, b) => b.recency - a.recency);
-  const demo = s.events.find(e => e.fictif);
+  const demo = s.events.find(e => e.fictif), une = headlines(real, now);
   const warn = (S.fromCache || S.error) ? `<div class="panel acc" style="--acc:var(--orange)">${eyebrow(S.fromCache ? 'Données en cache' : 'Hors connexion', 'var(--orange)')}<p class="note">${esc(S.fromCache ? `Vous consultez la dernière copie enregistrée, collectée le ${dateTime(s.generatedAt)}.` : `Dernières fiches synchronisées : données du ${dateTime(s.generatedAt)}.`)}${S.error ? ` Serveur injoignable : ${esc(S.error)}.` : ''}</p></div>` : '';
   return `<div class="wrap">
     <div class="between" style="padding:16px 0 4px"><div class="wm"><i></i>SENTINEL <b>CYBER</b></div>${syncPill()}</div>${warn}
@@ -63,6 +80,7 @@ function homeView() {
       <button class="panel" data-act="goStat" data-v="kev"><div class="v" style="color:var(--orange)">${kev}</div><div class="l">Inscriptions KEV</div><div class="s">7 jours</div></button>
       <button class="panel" data-act="goStat" data-v="src"><div class="v" style="color:${okSrc === s.sources.length ? 'var(--blue)' : 'var(--yellow)'}">${okSrc}/${s.sources.length}</div><div class="l">Sources</div><div class="s">joignables</div></button>
     </div>
+    ${une.length ? `<div class="sec"><h3 style="color:var(--orange)">À la une</h3><span class="n">${une.length}</span></div>${une.map(card).join('')}` : ''}
     <a class="btn primary block" style="margin:12px 0 2px" href="#/briefing">${IC.doc}Briefing des dernières 24 h</a>
     <button class="panel" data-act="goStat" data-v="map"><div class="between">${eyebrow('Localisations documentées')}<span class="small mono">${marks.length} pays ›</span></div><canvas class="map" id="map-home" role="img" aria-label="Carte des pays mentionnés dans les incidents"></canvas></button>
     ${sec('Maroc', maroc.length, 'Incidents', 'goStat" data-v="ma')}

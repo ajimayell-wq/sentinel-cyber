@@ -125,6 +125,7 @@ function briefData(hours) {
   const s = S.snap, since = Date.now() - hours * 3600e3, sinceDay = new Date(since).toISOString().slice(0, 10);
   const real = s.events.filter(e => !e.fictif), rec = (a, b) => b.recency - a.recency;
   const out = [
+    ['À la une', headlines(real)],
     ['Failles activement exploitées (ajouts KEV)', real.filter(e => (e.vuln?.kev?.added ?? '') >= sinceDay).sort((a, b) => (b.vuln.cvss ?? 0) - (a.vuln.cvss ?? 0))],
     ['Incidents confirmés', real.filter(e => e.kind === 'incident' && e.status === 'confirme' && e.recency >= since).sort(rec)],
     ['Revendications (non vérifiées)', real.filter(e => e.kind === 'incident' && e.status === 'revendique' && e.recency >= since).sort(rec)],
