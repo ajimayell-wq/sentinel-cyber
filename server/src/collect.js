@@ -19,7 +19,7 @@ export const setFetcher = f => { fetcher = f; };
 // Essaie chaque adresse connue de la source ; « read » valide le contenu (une page HTML à la place d'un flux = échec).
 async function fetchAny(src, opt, suffix = '', read = b => b) {
   let err;
-  for (const u of src.urls) { try { return { url: u, body: read(await fetcher(u + suffix, opt)) }; } catch (e) { err = new Error(`${e.message} (${new URL(u).hostname}${new URL(u).pathname})`); } }
+  for (const u of src.urls) { try { return { url: u, body: read(await fetcher(u + suffix, src.headers ? { ...opt, headers: { ...src.headers, ...(opt.headers ?? {}) } } : opt)) }; } catch (e) { err = new Error(`${e.message} (${new URL(u).hostname}${new URL(u).pathname})`); } }
   throw err;
 }
 async function ok(id, n, lastItem) {

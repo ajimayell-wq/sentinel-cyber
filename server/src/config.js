@@ -45,7 +45,7 @@ export const SOURCES = [
   { id: 'sekoia', name: 'Sekoia.io — Blog', org: 'Sekoia.io', kind: 'recherche', lang: 'en', site: 'https://blog.sekoia.io', urls: ['https://blog.sekoia.io/feed/'] },
 
   // pages d'état officielles des grands services : la mise à jour vient directement de l'éditeur (ce qu'il publie aussi sur X)
-  { id: 'ms365-status', name: 'Microsoft 365 — État des services', org: 'Microsoft', kind: 'editeur', role: 'statut', lang: 'en', site: 'https://status.cloud.microsoft', max: 15, urls: ['https://status.cloud.microsoft/api/feed/mac'] },
+  { id: 'ms365-status', name: 'Microsoft 365 — État des services', org: 'Microsoft', kind: 'editeur', role: 'statut', lang: 'en', site: 'https://status.cloud.microsoft', max: 15, headers: { accept: '*/*', 'user-agent': 'SentinelCyber/1.0 (+https://sentinel-cyber.pages.dev)' }, urls: ['https://status.cloud.microsoft/api/feed/mac'] },
   { id: 'azure-status', name: 'Azure — État des services', org: 'Microsoft', kind: 'editeur', role: 'statut', lang: 'en', site: 'https://azure.status.microsoft', max: 15, urls: ['https://rssfeed.azure.status.microsoft/en-us/status/feed/'] },
 
   { id: 'csn', name: 'Cyber Security News', org: 'Cyber Security News', kind: 'presse', lang: 'en', site: 'https://cybersecuritynews.com', urls: ['https://cybersecuritynews.com/feed/'] },
