@@ -1,0 +1,201 @@
+{
+ "sources": {
+  "p0": {
+   "ok": true,
+   "items": 10,
+   "nouvelles": 0
+  },
+  "csn": {
+   "ok": true,
+   "items": 10,
+   "nouvelles": 0
+  },
+  "nvd": {
+   "ok": false,
+   "items": 0,
+   "erreurs": [
+    "lot KEV : HTTP 503 (services.nvd.nist.gov/rest/json/cves/2.0)",
+    "CVE-2026-115560 : HTTP 503 (services.nvd.nist.gov/rest/json/cves/2.0)"
+   ]
+  },
+  "thn": {
+   "ok": true,
+   "items": 50,
+   "nouvelles": 0
+  },
+  "epss": {
+   "ok": true,
+   "date": "2026-11-14",
+   "items": 139
+  },
+  "msrc": {
+   "ok": true,
+   "items": 5792,
+   "nouvelles": 0
+  },
+  "anssi": {
+   "ok": true,
+   "items": 20,
+   "nouvelles": 0
+  },
+  "cisco": {
+   "ok": true,
+   "items": 50,
+   "nouvelles": 0
+  },
+  "dgssi": {
+   "ok": false,
+   "erreur": "fetch failed (www.dgssi.gov.ma/fr/bulletins)"
+  },
+  "enisa": {
+   "ok": true,
+   "items": 4,
+   "nouvelles": 0
+  },
+  "talos": {
+   "ok": true,
+   "items": 15,
+   "nouvelles": 0
+  },
+  "zataz": {
+   "ok": true,
+   "items": 10,
+   "nouvelles": 0
+  },
+  "chrome": {
+   "ok": true,
+   "items": 25,
+   "nouvelles": 0
+  },
+  "sekoia": {
+   "ok": true,
+   "items": 100,
+   "nouvelles": 0
+  },
+  "unit42": {
+   "ok": true,
+   "items": 15,
+   "nouvelles": 0
+  },
+  "ncsc-uk": {
+   "ok": true,
+   "items": 20,
+   "nouvelles": 0
+  },
+  "bleeping": {
+   "ok": true,
+   "items": 15,
+   "nouvelles": 0
+  },
+  "cisa-adv": {
+   "ok": true,
+   "items": 30,
+   "nouvelles": 0
+  },
+  "cisa-kev": {
+   "ok": true,
+   "items": 1781,
+   "suivies": 134,
+   "version": "2026.11.13"
+  },
+  "fortinet": {
+   "ok": true,
+   "items": 50,
+   "nouvelles": 0
+  },
+  "gnews-ma": {
+   "ok": true,
+   "items": 21,
+   "nouvelles": 1
+  },
+  "paloalto": {
+   "ok": true,
+   "items": 25,
+   "nouvelles": 0
+  },
+  "rlive-ma": {
+   "ok": true,
+   "items": 0,
+   "nouvelles": 0
+  },
+  "sans-isc": {
+   "ok": true,
+   "items": 10,
+   "nouvelles": 0
+  },
+  "certeu-ti": {
+   "ok": true,
+   "items": 10,
+   "nouvelles": 0
+  },
+  "cisa-news": {
+   "ok": true,
+   "items": 10,
+   "nouvelles": 0
+  },
+  "therecord": {
+   "ok": true,
+   "items": 5,
+   "nouvelles": 0
+  },
+  "wordfence": {
+   "ok": true,
+   "items": 10,
+   "nouvelles": 0
+  },
+  "certeu-adv": {
+   "ok": true,
+   "items": 10,
+   "nouvelles": 0
+  },
+  "certfr-cti": {
+   "ok": true,
+   "items": 40,
+   "nouvelles": 0
+  },
+  "ms-secblog": {
+   "ok": true,
+   "items": 10,
+   "nouvelles": 0
+  },
+  "securelist": {
+   "ok": true,
+   "items": 10,
+   "nouvelles": 0
+  },
+  "certfr-actu": {
+   "ok": true,
+   "items": 40,
+   "nouvelles": 0
+  },
+  "certfr-avis": {
+   "ok": true,
+   "items": 40,
+   "nouvelles": 0
+  },
+  "azure-status": {
+   "ok": true,
+   "items": 0,
+   "nouvelles": 0
+  },
+  "ms365-status": {
+   "ok": true,
+   "items": 1,
+   "nouvelles": 0
+  },
+  "securityweek": {
+   "ok": true,
+   "items": 10,
+   "nouvelles": 0
+  },
+  "certfr-alerte": {
+   "ok": true,
+   "items": 40,
+   "nouvelles": 0
+  }
+ },
+ "started": "2026-11-14T17:04:26.249Z",
+ "finished": "2026-11-14T17:04:40.655Z",
+ "fiches_mises_a_jour": 1,
+ "publications_nouvelles": 1
+}
