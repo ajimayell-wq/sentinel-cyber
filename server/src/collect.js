@@ -147,7 +147,9 @@ async function assign(ids, now, touched) {
     // a) la publication cite explicitement une publication déjà suivie : même événement, source d'origine connue
     if (p.links.length) {
       const o = await one(`SELECT id, event_id FROM publications WHERE url = ANY($1) AND event_id IS NOT NULL AND id <> $2 ORDER BY id LIMIT 1`, [p.links, p.id]);
-      if (o) { eventId = o.event_id; derived = o.id; }
+      // un lien vers un article « voir aussi » ne suffit pas à rejoindre une fiche de panne : le titre doit parler de la même panne
+      const te = o && recent.find(e => e.id === o.event_id);
+      if (o && !(te?.type === 'panne' && !fitsPanne(p.title, te.ref))) { eventId = o.event_id; derived = o.id; }
     }
     // b) avis centré sur une vulnérabilité suivie
     if (!eventId && c.cves.length && c.cves.length <= 4) {
