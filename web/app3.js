@@ -46,15 +46,24 @@ const syncPill = () => { const s = S.snap, c = S.syncing ? 'var(--blue)' : (S.er
 // Sujets des dernières 36 h dont tout le monde parle : nombre de sources, grand éditeur touché, panne mondiale, faille critique exploitée.
 // Le statut n'entre pas dans le tri : une panne « signalée » mais couverte partout reste à la une.
 const BIG = /\b(microsoft|outlook|teams|azure|windows|google|gmail|android|chrome|apple|icloud|iphone|amazon|aws|cloudflare|meta|facebook|instagram|whatsapp|crowdstrike|cisco|fortinet|palo alto|oracle|salesforce|openai|chatgpt|x\.com|twitter|starlink|visa|mastercard|swift)\b/i;
+const IMPACT = /\b(millions?|stole|stolen|steals?|breach(ed)?|hacked|ransom\w*|rançon\w*|vol (massif )?de données|revendique|piraté\w*|cyberattaque|cyberattack|payment|leak(ed)?|fuite|outage|panne)\b/i;
+// Score : couverture + importance, moins l'âge du sujet (1 point toutes les 8 h depuis sa première publication).
+// Un sujet ancien ne reste à la une que s'il a reçu un nouvel article dans les 12 dernières heures.
 function headlines(real, now = Date.now()) {
-  const since = now - 36 * 3600e3, sinceDay = new Date(since).toISOString().slice(0, 10), out = [], seen = new Set();
+  const since = now - 36 * 3600e3, out = [], seen = new Set();
   const scored = real.map(e => {
-    const v = e.vuln, big = (lower(e.title).match(BIG) ?? [])[0];
+    const v = e.vuln, t = lower(e.title), big = (t.match(BIG) ?? [])[0];
     let score = 0;
-    if (e.kind === 'incident' && e.recency >= since) score = e.sourceCount * 2 + (big ? 3 : 0) + (e.type === 'panne' ? 2 : 0) + (e.status === 'confirme' ? 1 : 0) + (/mondial|worldwide|global/i.test(e.title) ? 2 : 0);
-    else if (v?.kev && (v.kev.added ?? '') >= sinceDay) score = 3 + ((v.cvss ?? 0) >= 9 ? 2 : 0) + (v.kev.ransomware === 'Known' ? 2 : 0) + (big ? 2 : 0);
+    if (e.kind === 'incident' && e.recency >= since) {
+      const first = Math.min(...e.pubs.map(p => p.publishedAt ?? p.collectedAt), e.disclosedAt ?? Infinity, e.firstSeenAt);
+      const last = Math.max(...e.pubs.map(p => p.collectedAt), 0);
+      score = e.sourceCount * 2 + (big ? 3 : 0) + (e.type === 'panne' ? 2 : 0) + (e.status === 'confirme' ? 1 : 0) + (/mondial|worldwide|global/i.test(t) ? 2 : 0)
+        + (IMPACT.test(t) ? 2 : 0) + (e.versions.length > 1 && now - last < 12 * 3600e3 ? 2 : 0) - Math.floor((now - first) / (8 * 3600e3));
+    } else if (v?.kev?.added && Date.parse(v.kev.added) >= now - 48 * 3600e3) {
+      score = 3 + ((v.cvss ?? 0) >= 9 ? 2 : 0) + (v.kev.ransomware === 'Known' ? 2 : 0) + (big ? 2 : 0) - Math.floor((now - Date.parse(v.kev.added)) / (12 * 3600e3));
+    }
     return { e, score, key: e.type === 'panne' && big ? 'panne:' + big.replace(/outlook|teams|azure|windows/, 'microsoft') : e.id };
-  }).filter(x => x.score >= 5).sort((a, b) => b.score - a.score || b.e.recency - a.e.recency);
+  }).filter(x => x.score >= 4).sort((a, b) => b.score - a.score || b.e.recency - a.e.recency);
   for (const x of scored) { if (seen.has(x.key)) continue; seen.add(x.key); out.push(x.e); if (out.length >= 5) break; }
   return out;
 }

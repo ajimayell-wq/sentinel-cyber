@@ -40,7 +40,7 @@ function pubStatus(p, incident, type) {
 }
 const RANK = { conteste: 4, confirme: 3, revendique: 2, signale: 1 };
 
-const NOT_INCIDENT = /\b(benchmark|exercise|exercice|drill|simulation|survey|study|raises?|funding|emerges from stealth|acquires?|acquisition|webinar|podcast|conference|award|recap|roundup|trends|how to|researchers? (find|found|bypass|discover|show|demonstrate|uncover|warn|hack|detail)s?)\b/i;
+const NOT_INCIDENT = /\b(benchmark|exercise|exercice|drill|simulation|survey|study|raises?|funding|emerges from stealth|acquires?|acquisition|webinar|podcast|conference|award|recap|roundup|trends|how to|tips|guide|checklist|best practices|researchers? (find|found|bypass|discover|show|demonstrate|uncover|warn|hack|detail)s?)\b/i;
 const EVENT = /\b(breach(ed|es)?|hacked|compromised?|confirms?|stolen|stole|steals?|leak(ed|s)?|outage|cyber ?attack|cyberattaque|piratage|fuite|hit by|shuts? down|offline|sabotage|data theft|vol de données|revendi)/i;
 
 // Nature d'une publication, d'après son titre (et son résumé pour la presse). Le corps entier n'est jamais utilisé :
