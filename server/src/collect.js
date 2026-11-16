@@ -1,6 +1,6 @@
 // Collecte planifiée : flux -> publications dédoublonnées -> rattachement à une fiche -> nouvelle version.
 import { q, one } from './db.js';
-import { SOURCES, env } from './config.js';
+import { SOURCES, RX, env } from './config.js';
 import { parseFeed, excerpt, strip, hrefs, tokens, similar, date } from './parse.js';
 import { classify, nature, rebuild } from './model.js';
 
@@ -108,9 +108,34 @@ async function ensureVulnEvent(cve, now) {
 }
 
 // Rattache chaque nouvelle publication à une fiche existante ou en crée une.
+// Une publication ne rejoint une fiche de panne que si son TITRE nomme le même éditeur et parle de la panne
+// (ou de sa cause, de son rétablissement). Le corps d'article n'est pas utilisé : il cite souvent d'autres éditeurs.
+const titleTechs = t => classify(t ?? '').techs;
+const OUTCTX = /\b(outages?|pannes?|down|bug|root cause|incident report|post-incident|restor\w*|rétabli\w*|disrupt\w*|hors service|indisponible|fix(es|ed)?|unresponsive|panne)\b/i;
+function fitsPanne(title, ref) {
+  if (!ref.length) return true;
+  return titleTechs(title).some(t => ref.includes(t)) && (OUTCTX.test(title) || RX.noattack.test(title));
+}
+
+// Réparation : retire d'une fiche de panne les publications qui parlent d'autre chose (rattachées par une règle trop large).
+async function repairPannes(now, touched, fresh) {
+  for (const ev of await q(`SELECT id FROM events WHERE type='panne' AND NOT fictif AND updated_at > $1`, [new Date(now - 10 * 864e5)])) {
+    const pubs = await q(`SELECT id, title FROM publications WHERE event_id=$1 ORDER BY COALESCE(published_at,collected_at), id`, [ev.id]);
+    if (pubs.length < 2) continue;
+    const ref = titleTechs(pubs[0].title);
+    const out = pubs.slice(1).filter(p => !fitsPanne(p.title, ref)).map(p => p.id);
+    if (!out.length) continue;
+    await q(`UPDATE publications SET event_id=NULL, derived_from=NULL WHERE id = ANY($1)`, [out]);
+    fresh.push(...out); touched.add(ev.id);
+  }
+}
+
 async function assign(ids, now, touched) {
   if (!ids.length) return;
-  const recent = await q(`SELECT id, kind, type, tokens, updated_at, COALESCE(data->'techs', '[]'::jsonb) AS techs FROM events WHERE kind <> 'vuln' AND NOT fictif AND updated_at > $1`, [new Date(now - 10 * 864e5)]);
+  const recent = await q(`SELECT e.id, e.kind, e.type, e.tokens, e.updated_at, e.first_seen_at,
+      (SELECT title FROM publications p WHERE p.event_id=e.id ORDER BY COALESCE(p.published_at,p.collected_at), p.id LIMIT 1) AS ref_title
+    FROM events e WHERE e.kind <> 'vuln' AND NOT e.fictif AND e.updated_at > $1`, [new Date(now - 10 * 864e5)]);
+  for (const e of recent) e.ref = titleTechs(e.ref_title);
   const tracked = new Set((await q('SELECT cve FROM vulns')).map(r => r.cve));
   const pubs = await q(`SELECT p.*, s.kind AS skind FROM publications p JOIN sources s ON s.id=p.source_id WHERE p.id = ANY($1) ORDER BY COALESCE(p.published_at,p.collected_at), p.id`, [ids]);
   // les publications qui en citent une autre du même lot passent après elle
@@ -133,18 +158,21 @@ async function assign(ids, now, touched) {
     const tk = tokens(p.title, p.summary);
     if (!eventId) {
       let best = 0;
-      for (const e of recent) { if (e.kind !== c.kind) continue; const s = similar(tk, e.tokens); if (s > best) { best = s; eventId = e.id; } }
+      for (const e of recent) {
+        if (e.kind !== c.kind || (e.type === 'panne' && !fitsPanne(p.title, e.ref))) continue;
+        const s = similar(tk, e.tokens); if (s > best) { best = s; eventId = e.id; }
+      }
       if (best < 0.5) eventId = null;
     }
-    // d) panne de service : même éditeur touché dans les 48 h, quelle que soit la langue de l'article
-    if (!eventId && c.type === 'panne' && c.techs.length) {
-      const m = recent.find(e => e.kind === c.kind && e.type === 'panne' && new Date(e.updated_at) > new Date(now - 2 * 864e5) && (e.techs ?? []).some(t => c.techs.includes(t)));
+    // d) panne de service : même éditeur nommé dans le titre, fiche ouverte depuis moins de 3 jours, quelle que soit la langue
+    if (!eventId && c.type === 'panne') {
+      const m = recent.find(e => e.kind === c.kind && e.type === 'panne' && e.ref.length && new Date(e.first_seen_at) > new Date(now - 3 * 864e5) && fitsPanne(p.title, e.ref));
       if (m) eventId = m.id;
     }
     if (!eventId) {
       eventId = 'ev' + (await one(`SELECT nextval('event_seq') AS n`)).n;
       await q(`INSERT INTO events (id,kind,type,title,status,updated_at,first_seen_at,tokens) VALUES ($1,$2,$3,$4,'signale',$5,$5,$6)`, [eventId, c.kind, c.type, p.title, now, tk]);
-      recent.push({ id: eventId, kind: c.kind, type: c.type, tokens: tk, updated_at: now, techs: c.techs });
+      recent.push({ id: eventId, kind: c.kind, type: c.type, tokens: tk, updated_at: now, first_seen_at: now, ref_title: p.title, ref: titleTechs(p.title) });
     }
     await q(`UPDATE publications SET event_id=$2, derived_from=$3 WHERE id=$1`, [p.id, eventId, derived]);
     touched.add(eventId);
@@ -173,6 +201,7 @@ export async function collect({ now = new Date(), only } = {}) {
   for (const src of by('epss')) await guard(src, () => collectEpss(src, report));
 
   for (const { cve } of await q(`SELECT cve FROM vulns`)) { await ensureVulnEvent(cve, now); touched.add(cve); }
+  await repairPannes(now, touched, fresh);
   await assign(fresh, now, touched);
   // les incidents récents sont recalculés à chaque collecte : une règle de classement corrigée s'applique aussi aux fiches existantes
   for (const r of await q(`SELECT id FROM events WHERE kind='incident' AND NOT fictif AND updated_at > $1`, [new Date(now - 3 * 864e5)])) touched.add(r.id);
