@@ -1,0 +1,80 @@
+name: APK
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/apk.yml']
+  workflow_dispatch:
+concurrency:
+  group: apk
+  cancel-in-progress: true
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SENTINEL_SERVER: https://raw.githubusercontent.com/ajimayell-wq/sentinel-cyber/data/api
+      GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Première exécution : le code Android est encore sur GitLab, on l'importe ici une fois pour toutes.
+      - name: Importer le code Android depuis GitLab
+        if: hashFiles('android/settings.gradle.kts') == ''
+        run: |
+          git clone --depth 1 "https://oauth2:${GITLAB_TOKEN}@gitlab.com/ajimayell/sentinel-cyber.git" /tmp/gl
+          cp -r /tmp/gl/android ./android
+          rm -rf android/keystore
+          git config user.name "sentinel-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add android
+          git commit -m "Import du code Android depuis GitLab"
+          git push
+
+      # Même clé de signature que les APK compilées sur GitLab : la mise à jour s'installe par-dessus l'ancienne appli.
+      - name: Clé de signature
+        run: |
+          mkdir -p android/keystore
+          curl -sSfL -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}" -o android/keystore/debug.p12 \
+            "https://gitlab.com/api/v4/projects/88820680/packages/generic/sentinel-keys/1.0.0/debug.p12"
+          test -s android/keystore/debug.p12 && echo "Clé de signature récupérée"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.14.3
+
+      - name: SDK Android
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" --install "platforms;android-36" "build-tools;35.0.0" > /dev/null
+
+      - name: Données embarquées et polices
+        run: |
+          mkdir -p android/app/src/main/assets/fonts
+          curl -sSfL --retry 3 -o android/app/src/main/assets/seed.json "$SENTINEL_SERVER/snapshot.json"
+          for f in manrope:400 manrope:500 manrope:600 manrope:700 ibm-plex-mono:400 ibm-plex-mono:500; do
+            n="${f%%:*}"; w="${f##*:}"; out="android/app/src/main/assets/fonts/$n-$w.ttf"
+            curl -sSfL --retry 2 -o "$out" "https://cdn.jsdelivr.net/fontsource/fonts/$n@latest/latin-$w-normal.ttf" || true
+            if [ "$(head -c 4 "$out" 2>/dev/null | od -An -tx1 | tr -d ' \n')" = "00010000" ]; then echo "Police $n $w : ok"; else echo "Police $n $w indisponible"; rm -f "$out"; fi
+          done
+
+      - name: Compiler
+        run: |
+          # numéro de version toujours supérieur à ceux de GitLab (31 compilations)
+          export CI_PIPELINE_IID=$((GITHUB_RUN_NUMBER + 100))
+          cd android && gradle --no-daemon --stacktrace assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk ../sentinel-cyber.apk
+
+      - name: Publier l'APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view apk > /dev/null 2>&1 || gh release create apk --title "Application Android" --notes "Dernière version de l'application SENTINEL CYBER. Téléchargez sentinel-cyber.apk et installez-la par-dessus l'ancienne."
+          gh release upload apk sentinel-cyber.apk --clobber
+          echo "https://github.com/${GITHUB_REPOSITORY}/releases/download/apk/sentinel-cyber.apk"
